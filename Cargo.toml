@@ -1,0 +1,11 @@
+[package]
+name = "pcm"
+version = "0.1.0"
+authors = ["MarimeGui <lepro.guillaume@gmail.com>"]
+
+[lib]
+name = "pcm"
+
+[dependencies]
+magic_number = { git = "https://github.com/MarimeGui/magic_number_rust.git" }
+ez_io = { git = "https://github.com/MarimeGui/ez_io.git" }
