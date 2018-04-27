@@ -11,6 +11,7 @@ fn main() {
     let ref mut input_wave_reader = BufReader::new(File::open("test_files/input.wav").unwrap());
     println!("Importing...");
     let input_pcm = Pcm::import_wave_file(input_wave_reader).unwrap();
+    println!("Deriving...");
     let mut pcm_out_channels = Vec::new();
     for channel in 0..input_pcm.nb_channels {
         let mut pcm_out = Vec::new();
@@ -47,6 +48,7 @@ fn main() {
         }
         pcm_out_channels.push(pcm_out);
     }
+    println!("Reconverting...");
     let mut frames = Vec::new();
     for current_frame_id in 0..pcm_out_channels[0usize].len() {
         let mut temp = Vec::new();
@@ -61,7 +63,8 @@ fn main() {
         bits_per_sample: input_pcm.bits_per_sample,
         frames,
     };
+    println!("Writing File...");
     let ref mut output_wave_writer =
-        BufWriter::new(File::create("test_files/output_deriv.wav").unwrap());
+        BufWriter::new(File::create("test_files/output_derived.wav").unwrap());
     out_pcm.export_wave_file(output_wave_writer).unwrap();
 }

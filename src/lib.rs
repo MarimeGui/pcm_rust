@@ -6,7 +6,7 @@ pub mod error;
 use error::{PcmError, UndeterminableDataFormat, UnknownFormat};
 use ez_io::{ReadE, WriteE};
 use magic_number::check_magic_number;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write, Cursor};
 use std::time::Duration;
 
 #[derive(Clone)]
@@ -53,16 +53,19 @@ impl Pcm {
         }
         check_magic_number(reader, vec![b'd', b'a', b't', b'a'])?;
         let sub_chunk_2_size = reader.read_le_to_u32()?;
+        let mut data = vec![0u8; sub_chunk_2_size as usize];
+        reader.read_exact(&mut data)?;
+        let mut pcm_raw = Cursor::new(data);
         let mut frames = Vec::with_capacity(
             (sub_chunk_2_size as usize / (bits_per_sample as usize / 8)) / nb_channels as usize,
         );
-        let data_end = reader.seek(SeekFrom::Current(0))? + u64::from(sub_chunk_2_size);
-        while reader.seek(SeekFrom::Current(0))? < data_end {
+        let data_end = u64::from(sub_chunk_2_size);
+        while pcm_raw.seek(SeekFrom::Current(0))? < data_end {
             let mut samples = Vec::with_capacity(nb_channels as usize);
             for _ in 0..nb_channels {
                 match bits_per_sample {
-                    8 => samples.push(Sample::Unsigned8bits(reader.read_to_u8()?)),
-                    16 => samples.push(Sample::Signed16bits(reader.read_le_to_i16()?)),
+                    8 => samples.push(Sample::Unsigned8bits(pcm_raw.read_to_u8()?)),
+                    16 => samples.push(Sample::Signed16bits(pcm_raw.read_le_to_i16()?)),
                     _ => panic!(),
                 }
             }
@@ -144,12 +147,19 @@ mod tests {
     use super::Pcm;
     use std::fs::File;
     use std::io::{BufReader, BufWriter};
+    use std::time::{Duration, Instant};
     #[test]
     fn read_and_write() {
         let ref mut input_wave_reader = BufReader::new(File::open("test_files/input.wav").unwrap());
+        println!("Importing Wave File...");
+        let import_start = Instant::now();
         let input_pcm = Pcm::import_wave_file(input_wave_reader).unwrap();
+        println!("Import took {}.{} seconds", import_start.elapsed().as_secs(), import_start.elapsed().subsec_nanos());
         let ref mut output_wave_writer =
             BufWriter::new(File::create("test_files/output.wav").unwrap());
+        println!("Writing Wave File");
+        let output_pcm = Instant::now();
         input_pcm.export_wave_file(output_wave_writer).unwrap();
+        println!("Export took {}.{} seconds", output_pcm.elapsed().as_secs(), output_pcm.elapsed().subsec_nanos());
     }
 }
