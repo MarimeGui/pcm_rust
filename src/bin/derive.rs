@@ -59,6 +59,7 @@ fn main() {
     }
     let out_pcm = PCM {
         parameters: input_pcm.parameters,
+        loop_info: input_pcm.loop_info,
         frames,
     };
     println!("Writing File...");

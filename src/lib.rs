@@ -12,6 +12,7 @@ use std::time::Duration;
 #[derive(Clone)]
 pub struct PCM {
     pub parameters: PCMParameters,
+    pub loop_info: Option<Vec<LoopInfo>>,
     pub frames: Vec<Frame>,
 }
 
@@ -20,6 +21,12 @@ pub struct PCMParameters {
     pub sample_rate: u32,
     pub nb_channels: u16,
     pub bits_per_sample: u16,
+}
+
+#[derive(Clone)]
+pub struct LoopInfo {
+    pub loop_start: u64,
+    pub loop_end: u64,
 }
 
 #[derive(Clone)]
@@ -81,7 +88,11 @@ impl PCM {
             }
             frames.push(Frame { samples });
         }
-        Ok(PCM { parameters, frames })
+        Ok(PCM {
+            parameters,
+            loop_info: None,
+            frames,
+        })
     }
     pub fn export_wave_file<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PCMError> {
         let sub_chunk_2_size = self.get_audio_size() as u32;
