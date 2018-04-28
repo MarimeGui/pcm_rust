@@ -79,7 +79,7 @@ impl Pcm {
         })
     }
     pub fn export_wave_file<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PcmError> {
-        let sub_chunk_2_size = self.get_audio_binary_size() as u32;
+        let sub_chunk_2_size = self.get_audio_size() as u32;
         writer.write_all(&[b'R', b'I', b'F', b'F'])?; // Chunk ID
         writer.write_le_to_u32(36 + sub_chunk_2_size)?; // Chunk Size
         writer.write_all(&[b'W', b'A', b'V', b'E'])?; // Format
@@ -103,15 +103,15 @@ impl Pcm {
             for sample in &frame.samples {
                 match sample {
                     Sample::Unsigned8bits(s) => writer.write_to_u8(s.clone())?,
-                    Sample::Signed16bits(s) => writer.write_le_to_i16(s.clone())?,
+                    Sample::Signed16bits(s) => writer.write_le_to_i16(s.clone())?,  // Todo: Allow for choosing endianness
                 }
             }
         }
         Ok(())
     }
-    pub fn get_audio_binary_size(&self) -> usize {
+    pub fn get_audio_size(&self) -> usize {
         self.frames.len() * match self.frames.get(0) {
-            Some(f) => f.get_binary_size(),
+            Some(f) => f.get_audio_size(),
             None => 0,
         }
     }
@@ -125,19 +125,19 @@ impl Pcm {
 }
 
 impl Frame {
-    pub fn get_binary_size(&self) -> usize {
+    pub fn get_audio_size(&self) -> usize {
         self.samples.len() * match self.samples.get(0) {
-            Some(s) => s.get_binary_size(),
+            Some(s) => (s.get_binary_size()/8) as usize,
             None => 0,
         }
     }
 }
 
 impl Sample {
-    pub fn get_binary_size(&self) -> usize {
+    pub fn get_binary_size(&self) -> u16 {
         match self {
-            Sample::Unsigned8bits(_) => 1,
-            Sample::Signed16bits(_) => 2,
+            Sample::Unsigned8bits(_) => 8,
+            Sample::Signed16bits(_) => 16,
         }
     }
 }
