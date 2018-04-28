@@ -1,7 +1,7 @@
 extern crate pcm;
 
 use pcm::Frame;
-use pcm::Pcm;
+use pcm::PCM;
 use pcm::Sample;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
@@ -10,10 +10,10 @@ fn main() {
     println!("Opening file...");
     let ref mut input_wave_reader = BufReader::new(File::open("test_files/input.wav").unwrap());
     println!("Importing...");
-    let input_pcm = Pcm::import_wave_file(input_wave_reader).unwrap();
+    let input_pcm = PCM::import_wave_file(input_wave_reader).unwrap();
     println!("Deriving...");
     let mut pcm_out_channels = Vec::new();
-    for channel in 0..input_pcm.nb_channels {
+    for channel in 0..input_pcm.parameters.nb_channels {
         let mut pcm_out = Vec::new();
         let mut previous_sample = None;
         let mut current_sample = Some(input_pcm.frames[0usize].samples[channel as usize].clone());
@@ -52,15 +52,13 @@ fn main() {
     let mut frames = Vec::new();
     for current_frame_id in 0..pcm_out_channels[0usize].len() {
         let mut temp = Vec::new();
-        for channel_id in 0..input_pcm.nb_channels {
+        for channel_id in 0..input_pcm.parameters.nb_channels {
             temp.push(pcm_out_channels[channel_id as usize][current_frame_id as usize].clone());
         }
         frames.push(Frame { samples: temp });
     }
-    let out_pcm = Pcm {
-        sample_rate: input_pcm.sample_rate,
-        nb_channels: input_pcm.nb_channels,
-        bits_per_sample: input_pcm.bits_per_sample,
+    let out_pcm = PCM {
+        parameters: input_pcm.parameters,
         frames,
     };
     println!("Writing File...");

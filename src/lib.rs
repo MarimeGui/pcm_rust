@@ -3,18 +3,23 @@ extern crate magic_number;
 
 pub mod error;
 
-use error::{PcmError, UndeterminableDataFormat, UnknownFormat};
+use error::{PCMError, UndeterminableDataFormat, UnknownFormat};
 use ez_io::{ReadE, WriteE};
 use magic_number::check_magic_number;
 use std::io::{Read, Seek, SeekFrom, Write, Cursor};
 use std::time::Duration;
 
 #[derive(Clone)]
-pub struct Pcm {
+pub struct PCM {
+    pub parameters: PCMParameters,
+    pub frames: Vec<Frame>,
+}
+
+#[derive(Clone)]
+pub struct PCMParameters {
     pub sample_rate: u32,
     pub nb_channels: u16,
     pub bits_per_sample: u16,
-    pub frames: Vec<Frame>,
 }
 
 #[derive(Clone)]
@@ -28,8 +33,8 @@ pub enum Sample {
     Signed16bits(i16),
 }
 
-impl Pcm {
-    pub fn import_wave_file<R: Read + Seek>(reader: &mut R) -> Result<Pcm, PcmError> {
+impl PCM {
+    pub fn import_wave_file<R: Read + Seek>(reader: &mut R) -> Result<PCM, PCMError> {
         check_magic_number(reader, vec![b'R', b'I', b'F', b'F'])?;
         let _chunk_size = reader.read_le_to_u32()?;
         check_magic_number(reader, vec![b'W', b'A', b'V', b'E'])?;
@@ -37,7 +42,7 @@ impl Pcm {
         let _sub_chunk_1_size = reader.read_le_to_u32()?;
         let audio_format = reader.read_le_to_u16()?;
         if audio_format != 1 {
-            return Err(PcmError::UnknownFormat(UnknownFormat {
+            return Err(PCMError::UnknownFormat(UnknownFormat {
                 value: audio_format,
             }));
         }
@@ -47,10 +52,15 @@ impl Pcm {
         let _block_align = reader.read_le_to_u16()?;
         let bits_per_sample = reader.read_le_to_u16()?;
         if !((bits_per_sample == 8) | (bits_per_sample == 16)) {
-            return Err(PcmError::UndeterminableDataFormat(
+            return Err(PCMError::UndeterminableDataFormat(
                 UndeterminableDataFormat { bits_per_sample },
             ));
         }
+        let parameters = PCMParameters {
+            sample_rate,
+            nb_channels,
+            bits_per_sample
+        };
         check_magic_number(reader, vec![b'd', b'a', b't', b'a'])?;
         let sub_chunk_2_size = reader.read_le_to_u32()?;
         let mut data = vec![0u8; sub_chunk_2_size as usize];
@@ -71,14 +81,12 @@ impl Pcm {
             }
             frames.push(Frame { samples });
         }
-        Ok(Pcm {
-            sample_rate,
-            nb_channels,
-            bits_per_sample,
+        Ok(PCM {
+            parameters,
             frames,
         })
     }
-    pub fn export_wave_file<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PcmError> {
+    pub fn export_wave_file<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PCMError> {
         let sub_chunk_2_size = self.get_audio_size() as u32;
         writer.write_all(&[b'R', b'I', b'F', b'F'])?; // Chunk ID
         writer.write_le_to_u32(36 + sub_chunk_2_size)?; // Chunk Size
@@ -86,19 +94,19 @@ impl Pcm {
         writer.write_all(&[b'f', b'm', b't', b' '])?; // Sub-chunk 1 ID
         writer.write_le_to_u32(16)?; // Sub-chunk 1 Size
         writer.write_le_to_u16(1)?; // Audio Format
-        writer.write_le_to_u16(self.nb_channels)?; // Number of Channels
-        writer.write_le_to_u32(self.sample_rate)?; // Sample Rate
+        writer.write_le_to_u16(self.parameters.nb_channels)?; // Number of Channels
+        writer.write_le_to_u32(self.parameters.sample_rate)?; // Sample Rate
         writer.write_le_to_u32(
-            self.sample_rate * u32::from(self.nb_channels) * (u32::from(self.bits_per_sample) / 8),
+            self.parameters.sample_rate * u32::from(self.parameters.nb_channels) * (u32::from(self.parameters.bits_per_sample) / 8),
         )?; // Byte Rate
-        writer.write_le_to_u16(self.nb_channels * (self.bits_per_sample / 8))?; // Block Align
-        writer.write_le_to_u16(self.bits_per_sample)?; // Bits per Sample
+        writer.write_le_to_u16(self.parameters.nb_channels * (self.parameters.bits_per_sample / 8))?; // Block Align
+        writer.write_le_to_u16(self.parameters.bits_per_sample)?; // Bits per Sample
         writer.write_all(&[b'd', b'a', b't', b'a'])?; // Sub-chunk 2 ID
         writer.write_le_to_u32(sub_chunk_2_size)?; // Sub-chunk 2 size
         self.export_raw_file(writer)?; // PCM data
         Ok(())
     }
-    pub fn export_raw_file<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PcmError> {
+    pub fn export_raw_file<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PCMError> {
         for frame in &self.frames {
             for sample in &frame.samples {
                 match sample {
@@ -116,7 +124,7 @@ impl Pcm {
         }
     }
     pub fn get_audio_duration(&self) -> Duration {
-        let duration_float = (self.frames.len() as f64) / f64::from(self.sample_rate);
+        let duration_float = (self.frames.len() as f64) / f64::from(self.parameters.sample_rate);
         Duration::new(
             duration_float.round() as u64,
             (duration_float.fract() * 10f64.powi(9)) as u32,

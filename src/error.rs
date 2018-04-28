@@ -4,56 +4,56 @@ use std::fmt;
 use std::io::Error as IoError;
 
 #[derive(Debug)]
-pub enum PcmError {
+pub enum PCMError {
     IoError(IoError),
     UnknownFormat(UnknownFormat),
     WrongMagicNumber(MagicNumberCheckError),
     UndeterminableDataFormat(UndeterminableDataFormat),
 }
 
-impl Error for PcmError {
+impl Error for PCMError {
     fn description(&self) -> &str {
         match self {
-            PcmError::IoError(e) => e.description(),
-            PcmError::UnknownFormat(e) => e.description(),
-            PcmError::WrongMagicNumber(e) => e.description(),
-            PcmError::UndeterminableDataFormat(e) => e.description(),
+            PCMError::IoError(e) => e.description(),
+            PCMError::UnknownFormat(e) => e.description(),
+            PCMError::WrongMagicNumber(e) => e.description(),
+            PCMError::UndeterminableDataFormat(e) => e.description(),
         }
     }
 }
 
-impl fmt::Display for PcmError {
+impl fmt::Display for PCMError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PcmError::IoError(e) => e.fmt(f),
-            PcmError::UnknownFormat(e) => e.fmt(f),
-            PcmError::WrongMagicNumber(e) => e.fmt(f),
-            PcmError::UndeterminableDataFormat(e) => e.fmt(f),
+            PCMError::IoError(e) => e.fmt(f),
+            PCMError::UnknownFormat(e) => e.fmt(f),
+            PCMError::WrongMagicNumber(e) => e.fmt(f),
+            PCMError::UndeterminableDataFormat(e) => e.fmt(f),
         }
     }
 }
 
-impl From<IoError> for PcmError {
-    fn from(e: IoError) -> PcmError {
-        PcmError::IoError(e)
+impl From<IoError> for PCMError {
+    fn from(e: IoError) -> PCMError {
+        PCMError::IoError(e)
     }
 }
 
-impl From<UnknownFormat> for PcmError {
-    fn from(e: UnknownFormat) -> PcmError {
-        PcmError::UnknownFormat(e)
+impl From<UnknownFormat> for PCMError {
+    fn from(e: UnknownFormat) -> PCMError {
+        PCMError::UnknownFormat(e)
     }
 }
 
-impl From<MagicNumberCheckError> for PcmError {
-    fn from(e: MagicNumberCheckError) -> PcmError {
-        PcmError::WrongMagicNumber(e)
+impl From<MagicNumberCheckError> for PCMError {
+    fn from(e: MagicNumberCheckError) -> PCMError {
+        PCMError::WrongMagicNumber(e)
     }
 }
 
-impl From<UndeterminableDataFormat> for PcmError {
-    fn from(e: UndeterminableDataFormat) -> PcmError {
-        PcmError::UndeterminableDataFormat(e)
+impl From<UndeterminableDataFormat> for PCMError {
+    fn from(e: UndeterminableDataFormat) -> PCMError {
+        PCMError::UndeterminableDataFormat(e)
     }
 }
 
