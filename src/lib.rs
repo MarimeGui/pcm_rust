@@ -162,16 +162,16 @@ impl Sample {
 
 #[cfg(test)]
 mod tests {
-    use super::Pcm;
+    use super::PCM;
     use std::fs::File;
     use std::io::{BufReader, BufWriter};
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
     #[test]
     fn read_and_write() {
         let ref mut input_wave_reader = BufReader::new(File::open("test_files/input.wav").unwrap());
         println!("Importing Wave File...");
         let import_start = Instant::now();
-        let input_pcm = Pcm::import_wave_file(input_wave_reader).unwrap();
+        let input_pcm = PCM::import_wave_file(input_wave_reader).unwrap();
         println!(
             "Import took {}.{} seconds",
             import_start.elapsed().as_secs(),
