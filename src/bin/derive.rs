@@ -1,14 +1,14 @@
 extern crate pcm;
 
 use pcm::Frame;
-use pcm::PCM;
 use pcm::Sample;
+use pcm::PCM;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 
 fn main() {
     println!("Opening file...");
-    let ref mut input_wave_reader = BufReader::new(File::open("test_files/input.wav").unwrap());
+    let input_wave_reader = &mut BufReader::new(File::open("test_files/input.wav").unwrap());
     println!("Importing...");
     let input_pcm = PCM::import_wave_file(input_wave_reader).unwrap();
     println!("Deriving...");
@@ -62,7 +62,7 @@ fn main() {
         frames,
     };
     println!("Writing File...");
-    let ref mut output_wave_writer =
-        BufWriter::new(File::create("test_files/output_derived.wav").unwrap());
+    let output_wave_writer =
+        &mut BufWriter::new(File::create("test_files/output_derived.wav").unwrap());
     out_pcm.export_wave_file(output_wave_writer).unwrap();
 }

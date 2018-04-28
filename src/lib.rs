@@ -6,7 +6,7 @@ pub mod error;
 use error::{PCMError, UndeterminableDataFormat, UnknownFormat};
 use ez_io::{ReadE, WriteE};
 use magic_number::check_magic_number;
-use std::io::{Read, Seek, SeekFrom, Write, Cursor};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::time::Duration;
 
 #[derive(Clone)]
@@ -59,7 +59,7 @@ impl PCM {
         let parameters = PCMParameters {
             sample_rate,
             nb_channels,
-            bits_per_sample
+            bits_per_sample,
         };
         check_magic_number(reader, vec![b'd', b'a', b't', b'a'])?;
         let sub_chunk_2_size = reader.read_le_to_u32()?;
@@ -81,10 +81,7 @@ impl PCM {
             }
             frames.push(Frame { samples });
         }
-        Ok(PCM {
-            parameters,
-            frames,
-        })
+        Ok(PCM { parameters, frames })
     }
     pub fn export_wave_file<W: Write + Seek>(&self, writer: &mut W) -> Result<(), PCMError> {
         let sub_chunk_2_size = self.get_audio_size() as u32;
@@ -97,9 +94,11 @@ impl PCM {
         writer.write_le_to_u16(self.parameters.nb_channels)?; // Number of Channels
         writer.write_le_to_u32(self.parameters.sample_rate)?; // Sample Rate
         writer.write_le_to_u32(
-            self.parameters.sample_rate * u32::from(self.parameters.nb_channels) * (u32::from(self.parameters.bits_per_sample) / 8),
+            self.parameters.sample_rate * u32::from(self.parameters.nb_channels)
+                * (u32::from(self.parameters.bits_per_sample) / 8),
         )?; // Byte Rate
-        writer.write_le_to_u16(self.parameters.nb_channels * (self.parameters.bits_per_sample / 8))?; // Block Align
+        writer
+            .write_le_to_u16(self.parameters.nb_channels * (self.parameters.bits_per_sample / 8))?; // Block Align
         writer.write_le_to_u16(self.parameters.bits_per_sample)?; // Bits per Sample
         writer.write_all(&[b'd', b'a', b't', b'a'])?; // Sub-chunk 2 ID
         writer.write_le_to_u32(sub_chunk_2_size)?; // Sub-chunk 2 size
@@ -111,7 +110,7 @@ impl PCM {
             for sample in &frame.samples {
                 match sample {
                     Sample::Unsigned8bits(s) => writer.write_to_u8(s.clone())?,
-                    Sample::Signed16bits(s) => writer.write_le_to_i16(s.clone())?,  // Todo: Allow for choosing endianness
+                    Sample::Signed16bits(s) => writer.write_le_to_i16(s.clone())?, // Todo: Allow for choosing endianness
                 }
             }
         }
@@ -135,7 +134,7 @@ impl PCM {
 impl Frame {
     pub fn get_audio_size(&self) -> usize {
         self.samples.len() * match self.samples.get(0) {
-            Some(s) => (s.get_binary_size()/8) as usize,
+            Some(s) => (s.get_binary_size() / 8) as usize,
             None => 0,
         }
     }
@@ -162,12 +161,20 @@ mod tests {
         println!("Importing Wave File...");
         let import_start = Instant::now();
         let input_pcm = Pcm::import_wave_file(input_wave_reader).unwrap();
-        println!("Import took {}.{} seconds", import_start.elapsed().as_secs(), import_start.elapsed().subsec_nanos());
+        println!(
+            "Import took {}.{} seconds",
+            import_start.elapsed().as_secs(),
+            import_start.elapsed().subsec_nanos()
+        );
         let ref mut output_wave_writer =
             BufWriter::new(File::create("test_files/output.wav").unwrap());
         println!("Writing Wave File");
         let output_pcm = Instant::now();
         input_pcm.export_wave_file(output_wave_writer).unwrap();
-        println!("Export took {}.{} seconds", output_pcm.elapsed().as_secs(), output_pcm.elapsed().subsec_nanos());
+        println!(
+            "Export took {}.{} seconds",
+            output_pcm.elapsed().as_secs(),
+            output_pcm.elapsed().subsec_nanos()
+        );
     }
 }
