@@ -22,8 +22,12 @@ impl Error for PCMError {
             PCMError::UnknownBitsPerSample(_) => {
                 "Cannot infer information about a Bits per Sample in Wave header"
             }
-            PCMError::TooMuchData(_) => "Number of bytes composing audio is too ig to fit in a u32 number",
-            PCMError::TooManyFrames(_) => "Number of frames is too big to fit in a u32 to write Fact chunk"
+            PCMError::TooMuchData(_) => {
+                "Number of bytes composing audio is too ig to fit in a u32 number"
+            }
+            PCMError::TooManyFrames(_) => {
+                "Number of frames is too big to fit in a u32 to write Fact chunk"
+            }
         }
     }
 }

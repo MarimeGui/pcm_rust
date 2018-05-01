@@ -10,7 +10,7 @@ fn main() {
     println!("Opening file...");
     let input_wave_reader = &mut BufReader::new(File::open("test_files/input.wav").unwrap());
     println!("Importing...");
-    let input_pcm = PCM::import_wave_file(input_wave_reader).unwrap();
+    let input_pcm = PCM::wave_import_file(input_wave_reader).unwrap();
     println!("Deriving...");
     let mut pcm_out_channels = Vec::new();
     for channel in 0..input_pcm.parameters.nb_channels {
@@ -66,5 +66,5 @@ fn main() {
     println!("Writing File...");
     let output_wave_writer =
         &mut BufWriter::new(File::create("test_files/output_derived.wav").unwrap());
-    out_pcm.export_wave_file(output_wave_writer).unwrap();
+    out_pcm.wave_export_file(output_wave_writer).unwrap();
 }
