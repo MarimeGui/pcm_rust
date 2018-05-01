@@ -10,6 +10,7 @@ pub enum PCMError {
     UnknownFormat(u16),
     UnknownBitsPerSample(u16),
     TooMuchData(usize),
+    TooManyFrames(usize),
 }
 
 impl Error for PCMError {
@@ -21,7 +22,8 @@ impl Error for PCMError {
             PCMError::UnknownBitsPerSample(_) => {
                 "Cannot infer information about a Bits per Sample in Wave header"
             }
-            PCMError::TooMuchData(_) => "Cannot write this size of data to a Wave file",
+            PCMError::TooMuchData(_) => "Number of bytes composing audio is too ig to fit in a u32 number",
+            PCMError::TooManyFrames(_) => "Number of frames is too big to fit in a u32 to write Fact chunk"
         }
     }
 }
@@ -34,6 +36,7 @@ impl fmt::Display for PCMError {
             PCMError::UnknownFormat(v) => write!(f, "Unrecognized {}", v),
             PCMError::UnknownBitsPerSample(b) => write!(f, "Bits per Sample: {}", b),
             PCMError::TooMuchData(s) => write!(f, "Tried to write {} bytes of data", s),
+            PCMError::TooManyFrames(s) => write!(f, "Tried to write {} frames", s),
         }
     }
 }

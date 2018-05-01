@@ -134,18 +134,30 @@ impl PCM {
     }
     /// Exports a Wave file from a PCM
     pub fn export_wave_file<W: Write + Seek>(&self, writer: &mut W) -> Result<()> {
+        // Check if the audio size can fit into a Wave file
         if self.get_audio_size() > (<u32>::max_value() as usize) {
             return Err(PCMError::TooMuchData(self.get_audio_size()));
         }
-        if self.parameters.sample_type.get_best_wave_format() != 1 {
-            unimplemented!("Cannot work with wave files not using format 1 for now");
+        if self.parameters.sample_type.get_wave_format_chunk_extra_size() != 0 {
+            unimplemented!("Cannot work with sample types that requires extra info in format chunk for now");
         }
-        let sub_chunk_2_size = self.get_audio_size() as u32;
-        writer.write_all(&[b'R', b'I', b'F', b'F'])?; // Chunk ID
-        writer.write_le_to_u32(36 + sub_chunk_2_size)?; // Chunk Size
-        writer.write_all(&[b'W', b'A', b'V', b'E'])?; // Format
-        writer.write_all(&[b'f', b'm', b't', b' '])?; // Sub-chunk 1 ID
-        writer.write_le_to_u32(16)?; // Sub-chunk 1 Size
+        // Calculate sizes of all chunks beforehand
+        let format_chunk_size_interior = 16 + self.parameters.sample_type.get_wave_format_chunk_extra_size();
+        let format_chunk_size_total = format_chunk_size_interior + 8;
+        let (fact_chunk_size_interior, fact_chunk_size_total) = if self.parameters.sample_type.get_best_wave_format() == 1 {
+            (0, 0)
+        } else {
+            (4, 12)
+        };
+        let data_chunk_size_interior = self.get_audio_size() as u32;
+        let data_chunk_size_total = data_chunk_size_interior + 8;
+        let riff_chunk_size_interior = format_chunk_size_total + fact_chunk_size_total + data_chunk_size_total;
+        // Write the header
+        writer.write_all(&[b'R', b'I', b'F', b'F'])?; // RIFF Chunk
+        writer.write_le_to_u32(riff_chunk_size_interior)?; // Interior Size of RIFF Chunk
+        writer.write_all(&[b'W', b'A', b'V', b'E'])?; // WAVE Format
+        writer.write_all(&[b'f', b'm', b't', b' '])?; // Format Chunk
+        writer.write_le_to_u32(format_chunk_size_interior)?; // Format Chunk interior size
         writer.write_le_to_u16(self.parameters.sample_type.get_best_wave_format())?; // Audio Format
         writer.write_le_to_u16(self.parameters.nb_channels)?; // Number of Channels
         writer.write_le_to_u32(self.parameters.sample_rate)?; // Sample Rate
@@ -157,8 +169,16 @@ impl PCM {
             self.parameters.nb_channels * (self.parameters.sample_type.get_binary_size() / 8),
         )?; // Block Align
         writer.write_le_to_u16(self.parameters.sample_type.get_binary_size())?; // Bits per Sample
+        if self.parameters.sample_type.get_best_wave_format() != 1 {
+            writer.write_all(&[b'f', b'a', b'c', b't'])?;  // Fact chunk
+            writer.write_le_to_u32(fact_chunk_size_interior)?;  // Fixed size of 4 bytes
+            if self.frames.len() > (<u32>::max_value() as usize) {
+                return Err(PCMError::TooManyFrames(self.frames.len()));
+            }
+            writer.write_le_to_u32(self.frames.len() as u32)?;  // Number of frames
+        }
         writer.write_all(&[b'd', b'a', b't', b'a'])?; // Sub-chunk 2 ID
-        writer.write_le_to_u32(sub_chunk_2_size)?; // Sub-chunk 2 size
+        writer.write_le_to_u32(data_chunk_size_interior)?; // Sub-chunk 2 size
         self.export_raw_file(writer)?; // PCM data
         Ok(())
     }
@@ -265,6 +285,18 @@ impl Sample {
             Sample::Float(_) => 3,
             Sample::DoubleFloat(_) => 3,
             Sample::ImaADPCM(_) => 17,
+        }
+    }
+    pub fn get_wave_format_chunk_extra_size(&self) -> u32 {
+        match self {
+            Sample::Unsigned8bits(_) => 0,
+            Sample::Signed16bits(_) => 0,
+            Sample::Signed24bits(_) => 0,
+            Sample::Signed32bits(_) => 0,
+            Sample::MicrosoftADPCM(_) => 34,
+            Sample::Float(_) => 0,
+            Sample::DoubleFloat(_) => 0,
+            Sample::ImaADPCM(_) => 4,
         }
     }
 }
