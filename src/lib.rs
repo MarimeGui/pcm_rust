@@ -11,6 +11,8 @@ pub mod error;
 pub mod sample_types;
 /// Functions for Importing and Exporting Wave files
 pub mod wave;
+/// Conversions between different Samples
+pub mod conversion;
 
 use error::PCMError;
 use ez_io::WriteE;
