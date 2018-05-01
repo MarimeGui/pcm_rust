@@ -1,3 +1,8 @@
+#[derive(Clone, Debug)]
 pub struct I24 {}
 
-pub struct ImaAdpcm {}
+#[derive(Clone, Debug)]
+pub struct ImaADPCM {}
+
+#[derive(Clone, Debug)]
+pub struct MicrosoftADPCM {}

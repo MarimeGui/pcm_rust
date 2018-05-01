@@ -13,6 +13,7 @@ pub mod sample_types;
 use error::PCMError;
 use ez_io::{ReadE, WriteE};
 use magic_number::check_magic_number;
+use sample_types::{I24, ImaADPCM, MicrosoftADPCM};
 use std::fmt;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::time::Duration;
@@ -65,9 +66,13 @@ pub enum Sample {
     /// Two bytes signed
     Signed16bits(i16),
     /// Three bytes signed
-    Signed24bits,
+    Signed24bits(I24),
     /// Four bytes signed
     Signed32bits(i32),
+    /// Half byte IMA ADPCM
+    ImaADPCM(ImaADPCM),
+    /// Half byte Microsoft ADPCM
+    MicrosoftADPCM(MicrosoftADPCM),
     /// Four bytes float
     Float(f32),
     /// Eight bytes float
@@ -206,8 +211,15 @@ impl Sample {
                 match bits_per_sample {
                     8 => Sample::Unsigned8bits(0u8),
                     16 => Sample::Signed16bits(0i16),
-                    24 => Sample::Signed24bits,
+                    // 24 => Sample::Signed24bits(I24 {}), Unusable for now
                     32 => Sample::Signed32bits(0i32),
+                    x => return Err(PCMError::UnknownBitsPerSample(*x)),
+                }
+            }
+            2 => {
+                // Microsoft ADPCM
+                match bits_per_sample {
+                    // 4 => Sample::MicrosoftADPCM(MicrosoftADPCM {}), Unusable for now
                     x => return Err(PCMError::UnknownBitsPerSample(*x)),
                 }
             }
@@ -219,6 +231,13 @@ impl Sample {
                     x => return Err(PCMError::UnknownBitsPerSample(*x)),
                 }
             }
+            17 => {
+                // IMA ADPCM
+                match bits_per_sample {
+                    // 4 => Sample::ImaADPCM(ImaAdpcm {}), Unusable for now
+                    x => return Err(PCMError::UnknownBitsPerSample(*x)),
+                }
+            }
             x => return Err(PCMError::UnknownFormat(*x)),
         })
     }
@@ -227,10 +246,12 @@ impl Sample {
         match self {
             Sample::Unsigned8bits(_) => 8,
             Sample::Signed16bits(_) => 16,
-            Sample::Signed24bits => 24,
+            Sample::Signed24bits(_) => 24,
             Sample::Signed32bits(_) => 32,
+            Sample::MicrosoftADPCM(_) => 4,
             Sample::Float(_) => 32,
             Sample::DoubleFloat(_) => 64,
+            Sample::ImaADPCM(_) => 4,
         }
     }
     /// Returns best format to use when writing this type to a Wave file
@@ -238,10 +259,12 @@ impl Sample {
         match self {
             Sample::Unsigned8bits(_) => 1,
             Sample::Signed16bits(_) => 1,
-            Sample::Signed24bits => 1,
+            Sample::Signed24bits(_) => 1,
             Sample::Signed32bits(_) => 1,
+            Sample::MicrosoftADPCM(_) => 2,
             Sample::Float(_) => 3,
             Sample::DoubleFloat(_) => 3,
+            Sample::ImaADPCM(_) => 17,
         }
     }
 }
@@ -251,10 +274,12 @@ impl fmt::Display for Sample {
         let text = match self {
             Sample::Unsigned8bits(_) => "Unsigned 8 bits",
             Sample::Signed16bits(_) => "Signed 16 bits",
-            Sample::Signed24bits => "Signed 24 bits",
+            Sample::Signed24bits(_) => "Signed 24 bits",
             Sample::Signed32bits(_) => "Signed 32 bits",
-            Sample::Float(_) => "Float",
-            Sample::DoubleFloat(_) => "Double-precision Float",
+            Sample::MicrosoftADPCM(_) => "Microsoft ADPCM 4 bits",
+            Sample::Float(_) => "Float 32 bits",
+            Sample::DoubleFloat(_) => "Double-precision Float 64 bits",
+            Sample::ImaADPCM(_) => "IMA ADPCM 4 bits",
         };
         write!(f, "{}", text)
     }
