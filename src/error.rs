@@ -1,4 +1,5 @@
 use magic_number::MagicNumberCheckError;
+use super::Sample;
 use std::error::Error;
 use std::fmt;
 use std::io::Error as IoError;
@@ -9,6 +10,7 @@ pub enum PCMError {
     UnknownFormat(UnknownFormat),
     WrongMagicNumber(MagicNumberCheckError),
     UndeterminableDataFormat(UndeterminableDataFormat),
+    UnimplementedSampleType(UnimplementedSampleType)
 }
 
 impl Error for PCMError {
@@ -18,6 +20,7 @@ impl Error for PCMError {
             PCMError::UnknownFormat(e) => e.description(),
             PCMError::WrongMagicNumber(e) => e.description(),
             PCMError::UndeterminableDataFormat(e) => e.description(),
+            PCMError::UnimplementedSampleType(e) => e.description(),
         }
     }
 }
@@ -29,6 +32,7 @@ impl fmt::Display for PCMError {
             PCMError::UnknownFormat(e) => e.fmt(f),
             PCMError::WrongMagicNumber(e) => e.fmt(f),
             PCMError::UndeterminableDataFormat(e) => e.fmt(f),
+            PCMError::UnimplementedSampleType(e) => e.fmt(f)
         }
     }
 }
@@ -54,6 +58,12 @@ impl From<MagicNumberCheckError> for PCMError {
 impl From<UndeterminableDataFormat> for PCMError {
     fn from(e: UndeterminableDataFormat) -> PCMError {
         PCMError::UndeterminableDataFormat(e)
+    }
+}
+
+impl From<UnimplementedSampleType> for PCMError {
+    fn from(e: UnimplementedSampleType) -> PCMError {
+        PCMError::UnimplementedSampleType(e)
     }
 }
 
@@ -88,5 +98,22 @@ impl Error for UndeterminableDataFormat {
 impl fmt::Display for UndeterminableDataFormat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Bits per Sample: 0x{:X}", self.bits_per_sample)
+    }
+}
+
+#[derive(Debug)]
+pub struct UnimplementedSampleType {
+    pub sample_type: Sample,
+}
+
+impl Error for UnimplementedSampleType {
+    fn description(&self) -> &str {
+        "Unimplemented sample type for writing to a Wave file"
+    }
+}
+
+impl fmt::Display for UnimplementedSampleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Sample type: {}", self.sample_type)
     }
 }
