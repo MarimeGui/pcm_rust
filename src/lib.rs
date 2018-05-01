@@ -8,12 +8,12 @@ extern crate magic_number;
 /// Contains the errors for this library
 pub mod error;
 
-use error::{PCMError, UndeterminableDataFormat, UnknownFormat, UnimplementedSampleType};
+use error::PCMError;
 use ez_io::{ReadE, WriteE};
 use magic_number::check_magic_number;
+use std::fmt;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::time::Duration;
-use std::fmt;
 
 /// Represents PCM data.
 #[derive(Clone)]
@@ -63,7 +63,7 @@ pub enum Sample {
     /// Four bytes float
     Float(f32),
     /// Eight bytes float
-    DoubleFloat(f64)
+    DoubleFloat(f64),
 }
 
 impl PCM {
@@ -76,9 +76,7 @@ impl PCM {
         let _sub_chunk_1_size = reader.read_le_to_u32()?;
         let audio_format = reader.read_le_to_u16()?;
         if audio_format != 1 {
-            return Err(PCMError::UnknownFormat(UnknownFormat {
-                value: audio_format,
-            }));
+            return Err(PCMError::UnknownFormat(audio_format));
         }
         let nb_channels = reader.read_le_to_u16()?;
         let sample_rate = reader.read_le_to_u32()?;
@@ -86,9 +84,7 @@ impl PCM {
         let _block_align = reader.read_le_to_u16()?;
         let bits_per_sample = reader.read_le_to_u16()?;
         if !((bits_per_sample == 8) | (bits_per_sample == 16)) {
-            return Err(PCMError::UndeterminableDataFormat(
-                UndeterminableDataFormat { bits_per_sample },
-            ));
+            return Err(PCMError::UndeterminableDataFormat(bits_per_sample));
         }
         let parameters = PCMParameters {
             sample_rate,
@@ -151,7 +147,7 @@ impl PCM {
                 match sample {
                     Sample::Unsigned8bits(s) => writer.write_to_u8(s.clone())?,
                     Sample::Signed16bits(s) => writer.write_le_to_i16(s.clone())?, // Todo: Allow for choosing endianness
-                    x => return Err(PCMError::UnimplementedSampleType(UnimplementedSampleType {sample_type: x.clone()}))
+                    x => return Err(PCMError::UnimplementedSampleType(x.clone())),
                 }
             }
         }
@@ -191,7 +187,7 @@ impl Sample {
             Sample::Unsigned8bits(_) => 8,
             Sample::Signed16bits(_) => 16,
             Sample::Float(_) => 32,
-            Sample::DoubleFloat(_) => 64
+            Sample::DoubleFloat(_) => 64,
         }
     }
 }
@@ -202,7 +198,7 @@ impl fmt::Display for Sample {
             Sample::Unsigned8bits(_) => "Unsigned 8 bits",
             Sample::Signed16bits(_) => "Signed 16 bits",
             Sample::Float(_) => "Float",
-            Sample::DoubleFloat(_) => "Double-precision Float"
+            Sample::DoubleFloat(_) => "Double-precision Float",
         };
         write!(f, "{}", text)
     }

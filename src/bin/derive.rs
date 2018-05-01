@@ -40,7 +40,7 @@ fn main() {
                             }
                             _ => panic!(),
                         },
-                        _ => unimplemented!()
+                        _ => unimplemented!(),
                     },
                 },
             }
