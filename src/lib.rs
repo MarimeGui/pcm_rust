@@ -91,7 +91,9 @@ impl PCM {
                 match sample {
                     Sample::Unsigned8bits(s) => writer.write_to_u8(s.clone())?,
                     Sample::Signed16bits(s) => writer.write_le_to_i16(s.clone())?, // Todo: Allow for choosing endianness
-                    _ => unimplemented!("Can only write u8s and u16s for now"),
+                    Sample::Float(s) => writer.write_le_to_f32(s.clone())?,
+                    Sample::DoubleFloat(s) => writer.write_le_to_f64(s.clone())?,
+                    _ => unimplemented!("Can only write u8s, u16s, f32s and f64s for now"),
                 }
             }
         }
